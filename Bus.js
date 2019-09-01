@@ -433,17 +433,19 @@ var Bus = /** @class */ (function () {
             }); });
         });
     };
-    Bus.prototype.RespondAsync = function (rqType, rsType, responder) {
+    Bus.prototype.RespondAsync = function (options, responder) {
         var _this = this;
+        if (options.queue === undefined)
+            options.queue = options.rqType.TypeID;
         return this.Connection
             .then(function (connection) { return connection.createChannel(); })
             .then(function (responseChan) {
             return responseChan.assertExchange(Bus.rpcExchange, 'direct', { durable: true, autoDelete: false })
-                .then(function (okExchangeReply) { return responseChan.assertQueue(rqType.TypeID, { durable: true, exclusive: false, autoDelete: false }); })
-                .then(function (okQueueReply) { return responseChan.bindQueue(rqType.TypeID, Bus.rpcExchange, rqType.TypeID); })
-                .then(function (okBindReply) { return responseChan.consume(rqType.TypeID, function (reqMsg) {
+                .then(function (okExchangeReply) { return responseChan.assertQueue(options.queue, { durable: true, exclusive: false, autoDelete: false }); })
+                .then(function (okQueueReply) { return responseChan.bindQueue(options.queue, Bus.rpcExchange, options.queue); })
+                .then(function (okBindReply) { return responseChan.consume(options.queue, function (reqMsg) {
                 var msg = Bus.FromSubscription(reqMsg);
-                if (reqMsg.properties.type === rqType.TypeID) {
+                if (reqMsg.properties.type === options.rqType.TypeID) {
                     msg.TypeID = msg.TypeID || reqMsg.properties.type; //so we can get non-BusMessage events
                     var replyTo = reqMsg.properties.replyTo;
                     var correlationID = reqMsg.properties.correlationId;
@@ -465,13 +467,13 @@ var Bus = /** @class */ (function () {
                         }
                     })
                         .then(function (response) {
-                        _this.Channels.publishChannel.publish('', replyTo, Bus.ToBuffer(response), { type: rsType.TypeID, correlationId: correlationID });
+                        _this.Channels.publishChannel.publish('', replyTo, Bus.ToBuffer(response), { type: options.rsType.TypeID, correlationId: correlationID });
                         if (!ackdOrNackd)
                             responseChan.ack(reqMsg);
                     });
                 }
                 else {
-                    _this.SendToErrorQueue(msg, util.format('mismatched TypeID: %s !== %s', reqMsg.properties.type, rqType.TypeID));
+                    _this.SendToErrorQueue(msg, util.format('mismatched TypeID: %s !== %s', reqMsg.properties.type, options.rqType.TypeID));
                 }
             })
                 .then(function (ctag) {
@@ -482,12 +484,12 @@ var Bus = /** @class */ (function () {
                             .catch(function () { return false; });
                     },
                     deleteQueue: function () {
-                        return responseChan.deleteQueue(rqType.TypeID)
+                        return responseChan.deleteQueue(options.queue)
                             .then(function () { return true; })
                             .catch(function () { return false; });
                     },
                     purgeQueue: function () {
-                        return responseChan.purgeQueue(rqType.TypeID)
+                        return responseChan.purgeQueue(options.queue)
                             .then(function () { return true; })
                             .catch(function () { return false; });
                     }

@@ -73,10 +73,14 @@ export declare class Bus implements IBus {
     }) => {
         TypeID: string;
     }): Promise<IConsumerDispose>;
-    RespondAsync(rqType: {
-        TypeID: string;
-    }, rsType: {
-        TypeID: string;
+    RespondAsync(options: {
+        rqType: {
+            TypeID: string;
+        };
+        rsType: {
+            TypeID: string;
+        };
+        queue?: string;
     }, responder: (msg: {
         TypeID: string;
     }, ackFns?: {
@@ -156,10 +160,14 @@ export interface IBus {
     }) => {
         TypeID: string;
     }): Promise<IConsumerDispose>;
-    RespondAsync(rqType: {
-        TypeID: string;
-    }, rsType: {
-        TypeID: string;
+    RespondAsync(options: {
+        rqType: {
+            TypeID: string;
+        };
+        rsType: {
+            TypeID: string;
+        };
+        queue?: string;
     }, responder: (msg: {
         TypeID: string;
     }, ackFns?: {
